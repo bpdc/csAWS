@@ -10,3 +10,6 @@ Flask==2.3.3
 # Versão 4.0.0 - permite que o frontend acesse a API de domínios diferentes
 # Necessário para comunicação entre containers Docker
 Flask-CORS==4.0.0
+
+mysql-connector-python
+python-dotenv
