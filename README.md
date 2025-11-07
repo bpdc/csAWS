@@ -409,7 +409,7 @@ curl http://localhost:8080/health
 
 ### 📖 Documentação Adicional
 
-- [Guia Completo de Implantação AWS](docs/Guia-Implantacao-AWS_CS.md)
+- [Guia Completo de Implantação AWS]([docs/Guia-Implantacao-AWS_CS.md](https://github.com/bpdc/csAWS/blob/main/Guia-Implantacao-AWS_CS.md))
 - Passo a passo detalhado de toda infraestrutura
 - Troubleshooting e solução de problemas
 - Scripts de automação e manutenção
