@@ -69,7 +69,7 @@ aws --version
 
 1. Acessar Console AWS → EC2 → Instâncias → Executar instância
 2. Configurar:
-   - **Nome**: candyshop-api-server
+   - **Nome**: candyshop-backend
    - **AMI**: Amazon Linux 2
    - **Tipo de instância**: t2.micro (elegível ao Free Tier)
    - **Par de chaves**: Criar novo ou usar existente (baixar arquivo .pem)
@@ -125,7 +125,7 @@ docker --version
 
 ```bash
 # Clonar projeto
-git clone https://github.com/seu-usuario/CandyShopAPI.git
+git clone https://github.com/seu-usuario/csAWS.git
 cd CandyShopAPI
 ```
 
