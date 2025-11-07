@@ -1,0 +1,267 @@
+
+--Endereço Público EC2
+50.17.17.199
+
+-- ID do SG
+sg-039067c0c130c51be
+
+--Senha do RDS
+candyshop123!
+
+--Nome do banco de dados 
+candy_shopRDS
+
+--Endpoint RDS
+cs-db.crqme0kkcame.us-east-1.rds.amazonaws.com
+
+
+--Ngc da EC2 pra conectar
+ssh -i "cskey.pem" ec2-user@ec2-50-17-17-199.compute-1.amazonaws.com
+
+Update do git: git pull origin main
+
+DELETE DOCKER:
+
+# Parar o container (se estiver rodando)
+docker stop cs-ctn
+
+# Remover o container
+docker rm cs-ctn
+
+docker rmi cs-img
+
+
+Imagem: docker build --no-cache -t cs-img .
+
+Comando container:
+
+docker run -d --name cs-ctn --restart unless-stopped -p 8080:8080 --env-file .env cs-img
+
+Testes:
+
+DB:
+
+ mysql -h cs-db.crqme0kkcame.us-east-1.rds.amazonaws.com -u admin -p | SENHA: candyshop123!
+
+ USE candy_shop_db;
+
+SELECT * FROM products;
+
+=====================
+
+curl http://localhost:8080/products
+
+http://50.17.17.199:8080/products
+
+chmod 400 cskey.pem
+
+
+DB_HOST=cs-db.crqme0kkcame.us-east-1.rds.amazonaws.com
+DB_PORT=3306
+DB_USER=admin
+DB_PASSWORD=<<candyshop123!>>
+DB_NAME=<<candy_shopRDS>>
+
+Configuração DB|
+
+https://50t7xvnrm8.execute-api.us-east-1.amazonaws.com/prod-cs
+
+======================================================================================================================================
+
+-- Criar banco de dados
+CREATE DATABASE IF NOT EXISTS candy_shop_db;
+USE candy_shop_db;
+
+-- Tabela de produtos
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    category ENUM('doce', 'torta') NOT NULL,
+    flavor VARCHAR(100) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_category (category),
+    INDEX idx_stock (stock)
+);
+
+-- Tabela de pedidos
+CREATE TABLE orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_name VARCHAR(200),
+    customer_email VARCHAR(200),
+    customer_phone VARCHAR(50),
+    total DECIMAL(10, 2) NOT NULL,
+    status ENUM('pending', 'processing', 'completed', 'cancelled') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
+);
+
+-- Tabela de itens do pedido (relacionamento many-to-many)
+CREATE TABLE order_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    product_name VARCHAR(200) NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    subtotal DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    INDEX idx_order_id (order_id),
+    INDEX idx_product_id (product_id)
+);
+
+-- Inserir dados iniciais dos produtos
+INSERT INTO products (id, name, category, flavor, price, stock) VALUES
+(1, 'Brigadeiro Gourmet', 'doce', 'chocolate', 3.50, 25),
+(2, 'Beijinho Premium', 'doce', 'coco', 3.50, 20),
+(3, 'Torta de Chocolate', 'torta', 'chocolate', 45.00, 5),
+(4, 'Torta de Morango', 'torta', 'morango', 48.00, 3),
+(5, 'Quindim', 'doce', 'coco', 4.00, 15),
+(6, 'Pudim de Leite', 'doce', 'caramelo', 35.00, 8),
+(7, 'Torta de Limão', 'torta', 'limão', 42.00, 2),
+(8, 'Trufa de Chocolate', 'doce', 'chocolate', 2.50, 50);
+
+-- Views úteis
+
+-- View para produtos com estoque baixo
+CREATE VIEW lowstock_products AS
+SELECT * FROM products
+WHERE stock <= 10
+ORDER BY stock ASC;
+
+-- View para resumo de pedidos
+CREATE VIEW orders_summary AS
+SELECT 
+    o.id,
+    o.customer_name,
+    o.total,
+    o.status,
+    o.created_at,
+    COUNT(oi.id) as total_items
+FROM orders o
+LEFT JOIN order_items oi ON o.id = oi.order_id
+GROUP BY o.id;
+
+-- View para produtos mais vendidos
+CREATE VIEW top_selling_products AS
+SELECT 
+    p.id,
+    p.name,
+    p.category,
+    p.flavor,
+    COALESCE(SUM(oi.quantity), 0) as total_sold,
+    COALESCE(SUM(oi.subtotal), 0) as total_revenue
+FROM products p
+LEFT JOIN order_items oi ON p.id = oi.product_id
+GROUP BY p.id
+ORDER BY total_sold DESC;
+
+======================================================================================================================================
+
+Configuração / código da lambda 
+
+import json
+import urllib3
+import os
+
+# URL da API na EC2 - configure como variável de ambiente na Lambda
+API_URL = os.getenv('API_URL', 'http://3.94.186.236:8080/products')
+http = urllib3.PoolManager()
+
+def lambda_handler(event, context):
+    """
+    Função Lambda para gerar estatísticas de produtos da loja de doces.
+    Consome a API do EC2 via HTTP e calcula estatísticas agregadas.
+    """
+    
+    try:
+        print(f"Gerando relatório de produtos...")
+        print(f"URL da API: {API_URL}")
+        
+        # Fazer requisição HTTP para API do EC2
+        response = http.request('GET', API_URL, timeout=10.0)
+        
+        if response.status != 200:
+            raise Exception(f"API retornou status {response.status}")
+        
+        # Parsear resposta
+        data = json.loads(response.data.decode('utf-8'))
+        products = data.get('products', [])
+        
+        # Calcular estatísticas
+        total = len(products)
+        by_category = {}
+        by_flavor = {}
+        low_stock_products = []
+        total_value = 0
+        
+        for product in products:
+            category = product.get('category', 'unknown')
+            flavor = product.get('flavor', 'unknown')
+            stock = product.get('stock', 0)
+            price = product.get('price', 0)
+            
+            # Contagem por categoria
+            by_category[category] = by_category.get(category, 0) + 1
+            
+            # Contagem por sabor
+            by_flavor[flavor] = by_flavor.get(flavor, 0) + 1
+            
+            # Produtos com estoque baixo (<=10)
+            if stock <= 10:
+                low_stock_products.append({
+                    'id': product.get('id'),
+                    'name': product.get('name'),
+                    'stock': stock
+                })
+            
+            # Valor total em estoque
+            total_value += (stock * price)
+        
+        # Construir relatório
+        report = {
+            'total_products': total,
+            'by_category': by_category,
+            'by_flavor': by_flavor,
+            'low_stock_count': len(low_stock_products),
+            'low_stock_products': low_stock_products,
+            'total_inventory_value': round(total_value, 2),
+            'total_inventory_value_formatted': f"R$ {total_value:,.2f}"
+        }
+        
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'GET,OPTIONS'
+            },
+            'body': json.dumps({
+                'success': True,
+                'report': report,
+                'timestamp': context.aws_request_id if context else 'local-test'
+            }, ensure_ascii=False)
+        }
+        
+    except Exception as e:
+        print(f"Erro ao gerar relatório: {str(e)}")
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({
+                'success': False,
+                'error': str(e)
+            })
+        }
+
+
