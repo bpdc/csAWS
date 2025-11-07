@@ -405,23 +405,11 @@ docker logs tasks-api
 curl http://localhost:8080/health
 ```
 
-***
 
-### 💰 Custos AWS (Free Tier)
-
-| Serviço | Free Tier | Custo Estimado |
-|:--------|:----------|:---------------|
-| EC2 t2.micro | 750h/mês (12 meses) | $0 (dentro do limite) |
-| RDS db.t3.micro | 750h/mês (12 meses) | $0 (dentro do limite) |
-| Lambda | 1M req/mês (sempre) | $0 (baixo uso) |
-| API Gateway | 1M req/mês (12 meses) | $0 (dentro do limite) |
-| **Total** | - | **~$0/mês** (Free Tier) |
-
-***
 
 ### 📖 Documentação Adicional
 
-- [Guia Completo de Implantação AWS](docs/Guia-Implantacao-AWS.md)
+- [Guia Completo de Implantação AWS](docs/Guia-Implantacao-AWS_CS.md)
 - Passo a passo detalhado de toda infraestrutura
 - Troubleshooting e solução de problemas
 - Scripts de automação e manutenção
@@ -473,10 +461,6 @@ docker logs tasks-api
     <img src="https://skillicons.dev/icons?i=github" alt="GitHub"/>
   </a>
 </div>
-
-### 📜 Licença
-
-Projeto sob licença MIT – veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ---
 
