@@ -469,7 +469,7 @@ docker logs tasks-api
 ### 👤 Autor
 
 <div align="center">
-  <a href="https://github.com/SEU_USUARIO" target="_blank">
+  <a href="https://github.com/Vitul1906" target="_blank">
     <img src="https://skillicons.dev/icons?i=github" alt="GitHub"/>
   </a>
 </div>
@@ -482,7 +482,7 @@ Projeto sob licença MIT – veja o arquivo [LICENSE](LICENSE) para mais detalhe
 
 ### 🙏 Agradecimentos
 
-- Professores da disciplina Serviços em Nuvem
+- Joaquim "Cloudio"
 - Documentação oficial AWS
 - Comunidade Docker e Flask
 
